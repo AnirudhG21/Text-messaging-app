@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Messaging Website</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #1E201E;
+            color: #ECDFCC;
+        }
+        h1 {
+            color: #697565;
+        }
+        #chat-container {
+            border: 1px solid #697565;
+            height: 400px;
+            overflow-y: scroll;
+            padding: 10px;
+            margin-bottom: 10px;
+            background-color: #3C3D37;
+        }
+        #message-input {
+            width: 70%;
+            padding: 8px;
+            background-color: #ECDFCC;
+            color: #1E201E;
+            border: none;
+            margin-right: 5px;
+        }
+        #send-button, #image-upload {
+            padding: 8px 15px;
+            background-color: #697565;
+            color: #ECDFCC;
+            border: none;
+            cursor: pointer;
+        }
+        #send-button:hover, #image-upload:hover {
+            background-color: #5A6456;
+        }
+        label {
+            display: inline-block;
+            margin-top: 10px;
+            margin-right: 10px;
+            color: #697565;
+        }
+        p {
+            margin: 5px 0;
+            padding: 5px;
+            background-color: #3C3D37;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Simple Messaging Website</h1>
+    <div id="chat-container"></div>
+    
+    <label for="message-input">Message:</label>
+    <input type="text" id="message-input" placeholder="Type your message..." title="Type your message">
+    
+    <button id="send-button">Send</button>
+    
+    <label for="image-upload">Upload Image:</label>
+    <input type="file" id="image-upload" accept="image/*" title="Upload an image">
+    
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        const chatContainer = document.getElementById('chat-container');
+        const messageInput = document.getElementById('message-input');
+        const sendButton = document.getElementById('send-button');
+        const imageUpload = document.getElementById('image-upload');
+
+        socket.on('initial messages', (messages) => {
+            messages.forEach(msg => {
+                if (msg.type === 'image') {
+                    addImageToChat('User', msg.data);
+                } else {
+                    addMessageToChat('User', msg);
+                }
+            });
+        });
+
+        socket.on('chat message', (msg) => {
+            addMessageToChat('User', msg);
+        });
+
+        socket.on('image upload', (imageData) => {
+            addImageToChat('User', imageData);
+        });
+
+        sendButton.addEventListener('click', sendMessage);
+        messageInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        imageUpload.addEventListener('change', handleImageUpload);
+
+        function sendMessage() {
+            const message = messageInput.value.trim();
+            if (message) {
+                socket.emit('chat message', message);
+                messageInput.value = '';
+            }
+        }
+
+        function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    socket.emit('image upload', e.target.result);
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function addMessageToChat(sender, message) {
+            const messageElement = document.createElement('p');
+            messageElement.textContent = `${sender}: ${message}`;
+            chatContainer.appendChild(messageElement);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        function addImageToChat(sender, imageUrl) {
+            const imageElement = document.createElement('img');
+            imageElement.src = imageUrl;
+            imageElement.style.maxWidth = '200px';
+            imageElement.style.maxHeight = '200px';
+            
+            const wrapperElement = document.createElement('div');
+            wrapperElement.textContent = `${sender}: `;
+            wrapperElement.appendChild(imageElement);
+            
+            chatContainer.appendChild(wrapperElement);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+    </script>
+</body>
+</html>
